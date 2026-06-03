@@ -39,7 +39,9 @@ SM4 国密加密存储
 | `REQUEST_LOCK_DURATION` | 请求去重锁有效期（秒） | `1` |
 
 # 安装依赖
+```bash
 pip install flask requests
+```
 
 # 设置密钥并启动（开发模式）
 ```bash
