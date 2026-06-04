@@ -23,12 +23,19 @@ def init_db():
             mobile TEXT NOT NULL,
             token TEXT NOT NULL,
             app_id TEXT DEFAULT '',
+            ecs_token TEXT DEFAULT '',
             cookies TEXT DEFAULT '{}',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_login TIMESTAMP
         )
     ''')
+
+    # 兼容旧表：添加 ecs_token 字段（如果不存在）
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN ecs_token TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass  # 字段已存在
     
     # 创建登录会话表
     cursor.execute('''
@@ -103,28 +110,27 @@ def validate_session(session_token):
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT u.id, u.mobile, u.token, u.app_id, u.cookies, s.csrf_token
+            SELECT u.id, u.mobile, u.token, u.app_id, u.ecs_token, u.cookies, s.csrf_token
             FROM sessions s
             JOIN users u ON s.user_id = u.id
             WHERE s.session_token = ? AND s.expires_at > ?
         ''', (hashed, datetime.now().isoformat()))
-        
+
         row = cursor.fetchone()
         if row:
             result = dict(row)
             # 解密敏感字段
             try:
                 result['mobile'] = sm4_decrypt(result['mobile'])
-            except Exception:
-                pass
-            try:
                 result['token'] = sm4_decrypt(result['token'])
-            except Exception:
-                pass
-            try:
+                result['ecs_token'] = sm4_decrypt(result['ecs_token']) if result.get('ecs_token') else ''
+                result['app_id'] = sm4_decrypt(result['app_id']) if result.get('app_id') else ''
                 result['cookies'] = json.loads(sm4_decrypt(result['cookies']))
             except Exception:
-                result['cookies'] = json.loads(result.get('cookies', '{}'))
+                try:
+                    result['cookies'] = json.loads(result.get('cookies', '{}'))
+                except Exception:
+                    result['cookies'] = {}
             return result
     
     return None
@@ -231,35 +237,41 @@ def delete_cache(user_id, cache_key):
         cursor.execute('DELETE FROM data_cache WHERE user_id = ? AND cache_key = ?', (user_id, cache_key))
         conn.commit()
 
-def save_user_with_login_info(login_info, token, app_id=''):
+def save_user_with_login_info(login_info, token, app_id='', ecs_token=''):
     """保存或更新用户信息（根据手机号识别用户）"""
     mobile = login_info.get('mobile', '')
     cookies = login_info.get('cookies', {})
+    if not app_id:
+        app_id = login_info.get('app_id', '')
+    if not ecs_token:
+        ecs_token = login_info.get('ecs_token', '')
     user_id = hash_token(mobile) if mobile else hash_token(token)
-    
+
     # 加密敏感字段
     enc_mobile = sm4_encrypt(mobile)
     enc_token = sm4_encrypt(token)
+    enc_ecs_token = sm4_encrypt(ecs_token) if ecs_token else ''
+    enc_app_id = sm4_encrypt(app_id) if app_id else ''
     enc_cookies = sm4_encrypt(json.dumps(cookies, ensure_ascii=False))
-    
+
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute('SELECT id FROM users WHERE id = ?', (user_id,))
         existing = cursor.fetchone()
-        
+
         now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         if existing:
             cursor.execute('''
-                UPDATE users SET mobile = ?, token = ?, app_id = ?, cookies = ?, last_login = ?
+                UPDATE users SET mobile = ?, token = ?, app_id = ?, ecs_token = ?, cookies = ?, last_login = ?
                 WHERE id = ?
-            ''', (enc_mobile, enc_token, app_id, enc_cookies, now_str, user_id))
+            ''', (enc_mobile, enc_token, enc_app_id, enc_ecs_token, enc_cookies, now_str, user_id))
         else:
             cursor.execute('''
-                INSERT INTO users (id, mobile, token, app_id, cookies, last_login)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (user_id, enc_mobile, enc_token, app_id, enc_cookies, now_str))
+                INSERT INTO users (id, mobile, token, app_id, ecs_token, cookies, last_login)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (user_id, enc_mobile, enc_token, enc_app_id, enc_ecs_token, enc_cookies, now_str))
         conn.commit()
-    
+
     return user_id
 
 def update_user_cookies(user_id, cookies):

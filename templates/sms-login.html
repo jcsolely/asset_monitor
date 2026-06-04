@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>短信登录 - 资产监控</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <script src="./static/js/vue.global.js"></script>
+    <script src="./static/js/tailwindcss.js"></script>
+    <script src="https://turing.captcha.qcloud.com/TJCaptcha.js"></script>
+    <style>
+        * {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        [v-cloak] { display: none; }
+        body {
+            background: #f5f7fa;
+            min-height: 100vh;
+            color: #1a1a2e;
+        }
+        .glass-card {
+            background: #ffffff;
+            border: 1px solid #e8ecf1;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+        }
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(26, 26, 46, 0.9);
+            color: white;
+            padding: 14px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 9999;
+            pointer-events: none;
+            animation: toastIn 0.3s ease forwards;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+        @keyframes toastIn {
+            0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .input-field {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 15px;
+            color: #1a1a2e;
+            background: #f9fafb;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+        .input-field:focus {
+            border-color: #7c3aed;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.1);
+        }
+        .input-field::placeholder {
+            color: #9ca3af;
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 13px 20px;
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(124, 58, 237, 0.4);
+        }
+        .btn-primary:active {
+            transform: scale(0.98);
+        }
+        .btn-primary:disabled {
+            background: #a78bfa;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .btn-send {
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+        }
+        .btn-send:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        }
+        .btn-send:disabled {
+            background: #6ee7b7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .radio-group {
+            display: flex;
+            gap: 16px;
+        }
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #6b7280;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .radio-label input[type="radio"] {
+            accent-color: #7c3aed;
+            width: 16px;
+            height: 16px;
+        }
+        .radio-label.active {
+            color: #7c3aed;
+            font-weight: 500;
+        }
+        .success-card {
+            background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+            border: 2px solid #a7f3d0;
+            border-radius: 16px;
+            padding: 20px;
+        }
+        .phone-suggest {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 100%;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            z-index: 50;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 4px;
+        }
+        .phone-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #374151;
+            transition: background 0.15s;
+        }
+        .phone-item:hover {
+            background: #f3f4f6;
+        }
+        .phone-empty {
+            padding: 12px 16px;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" v-cloak class="min-h-screen flex items-center justify-center px-4 py-8">
+        <!-- Toast 提示 -->
+        <div v-if="toastMessage" class="toast">{{ toastMessage }}</div>
+
+        <div class="w-full max-w-sm">
+            <!-- Logo 和标题 -->
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-purple-600 flex items-center justify-center">
+                    <span class="text-white text-2xl">💬</span>
+                </div>
+                <h1 class="text-xl font-semibold text-gray-900">短信验证码登录</h1>
+                <p class="text-sm text-gray-500 mt-1">通过短信验证码快速登录</p>
+            </div>
+
+            <!-- 已登录提示 -->
+            <div v-if="isLoggedIn" class="glass-card p-6 text-center">
+                <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-green-50 flex items-center justify-center">
+                    <span class="text-green-500 text-2xl">✓</span>
+                </div>
+                <p class="text-gray-700 text-sm font-medium mb-1">检测到已登录</p>
+                <p class="text-gray-400 text-xs mb-4">
+                    <span class="text-purple-600 font-semibold">{{ countdown }}</span> 秒后自动跳转
+                </p>
+                <button @click="goToIndex" class="text-purple-600 hover:text-purple-700 text-sm font-medium">
+                    立即跳转 →
+                </button>
+            </div>
+
+            <!-- 登录表单 -->
+            <div v-else class="glass-card p-6">
+                <form @submit.prevent="handleLogin" class="space-y-5">
+                    <!-- 手机号 -->
+                    <div class="relative">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">手机号</label>
+                        <input
+                            v-model="form.phone"
+                            type="tel"
+                            placeholder="请输入手机号"
+                            maxlength="11"
+                            autocomplete="off"
+                            class="input-field"
+                            @focus="showPhoneSuggest = phoneHistory.length > 0"
+                            @blur="hidePhoneSuggest"
+                            @input="onPhoneInput"
+                        >
+                        <!-- 手机号历史记录 -->
+                        <div v-if="showPhoneSuggest && phoneHistory.length > 0" class="phone-suggest">
+                            <div
+                                v-for="ph in phoneHistory"
+                                :key="ph"
+                                class="phone-item"
+                                @mousedown.prevent="selectPhone(ph)"
+                            >
+                                {{ ph }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AppID 模式 -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">AppID 模式</label>
+                        <div class="radio-group">
+                            <label class="radio-label" :class="{ active: form.appidMode === 'random' }">
+                                <input type="radio" v-model="form.appidMode" value="random" @change="onAppidModeChange">
+                                随机生成
+                            </label>
+                            <label class="radio-label" :class="{ active: form.appidMode === 'custom' }">
+                                <input type="radio" v-model="form.appidMode" value="custom" @change="onAppidModeChange">
+                                自定义
+                            </label>
+                        </div>
+                        <input
+                            v-if="form.appidMode === 'custom'"
+                            v-model="form.appid"
+                            type="text"
+                            placeholder="请输入自定义 AppID"
+                            class="input-field mt-2"
+                        >
+                    </div>
+
+                    <!-- 验证码 -->
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">短信验证码</label>
+                        <div class="flex gap-3">
+                            <input
+                                v-model="form.code"
+                                type="text"
+                                placeholder="请输入验证码"
+                                maxlength="6"
+                                class="input-field flex-1"
+                            >
+                            <button
+                                type="button"
+                                @click="sendCode"
+                                :disabled="sendDisabled"
+                                class="btn-send"
+                            >
+                                {{ sendBtnText }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 登录按钮 -->
+                    <button
+                        type="submit"
+                        :disabled="loginLoading"
+                        class="btn-primary flex items-center justify-center gap-2"
+                    >
+                        <div v-if="loginLoading" class="loading-spinner"></div>
+                        <span>{{ loginLoading ? '登录中...' : '立即登录' }}</span>
+                    </button>
+                </form>
+
+                <!-- 切换到Token登录 -->
+                <div class="mt-5 pt-4 border-t border-gray-200 text-center">
+                    <a :href="getLoginUrl()" class="text-sm text-gray-500 hover:text-purple-600 transition-colors">
+                        ← Token 登录
+                    </a>
+                </div>
+            </div>
+
+            <!-- 页脚 -->
+            <p class="text-center text-gray-400 text-xs mt-6">数据仅供参考，以官方数据为准</p>
+        </div>
+    </div>
+
+    <script>
+        const CAPTCHA_APPID = "195809716";
+        const PHONE_HISTORY_KEY = "phone_history";
+
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    form: {
+                        phone: '',
+                        code: '',
+                        appid: '',
+                        appidMode: 'random'
+                    },
+                    loading: false,
+                    loginLoading: false,
+                    isLoggedIn: false,
+                    countdown: 3,
+                    toastMessage: '',
+                    toastTimer: null,
+                    sendBtnText: '发送验证码',
+                    sendDisabled: false,
+                    sendCountdown: 0,
+                    showPhoneSuggest: false,
+                    phoneHistory: []
+                };
+            },
+            methods: {
+                // ========== 工具方法 ==========
+                showToast(message) {
+                    this.toastMessage = message;
+                    if (this.toastTimer) clearTimeout(this.toastTimer);
+                    this.toastTimer = setTimeout(() => { this.toastMessage = ''; }, 2500);
+                },
+                getApiBase() {
+                    const path = window.location.pathname;
+                    const base = /\/[^/]*\.[^/]+$/.test(path)
+                        ? path.replace(/\/[^/]*\.[^/]*$/, '')
+                        : path.replace(/\/[^/]*$/, '');
+                    return base.replace(/\/$/, '') + '/api';
+                },
+                getLoginUrl() {
+                    const path = window.location.pathname;
+                    const base = /\/[^/]*\.[^/]+$/.test(path)
+                        ? path.replace(/\/[^/]*\.[^/]*$/, '')
+                        : path.replace(/\/[^/]*$/, '');
+                    return base.replace(/\/$/, '') + '/login';
+                },
+
+                // ========== 手机号历史 ==========
+                loadPhoneHistory() {
+                    try {
+                        const raw = localStorage.getItem(PHONE_HISTORY_KEY);
+                        const list = raw ? JSON.parse(raw) : [];
+                        this.phoneHistory = Array.isArray(list) ? list.filter(v => typeof v === 'string' && v.length > 0) : [];
+                    } catch (e) {
+                        this.phoneHistory = [];
+                    }
+                },
+                savePhoneHistory(phone) {
+                    try {
+                        const p = (phone || '').replace(/[^0-9]/g, '').slice(0, 11);
+                        if (p.length !== 11) return;
+                        let list = this.phoneHistory.filter(v => v !== p);
+                        list.unshift(p);
+                        if (list.length > 20) list = list.slice(0, 20);
+                        this.phoneHistory = list;
+                        localStorage.setItem(PHONE_HISTORY_KEY, JSON.stringify(list));
+                    } catch (e) {}
+                },
+                selectPhone(phone) {
+                    this.form.phone = phone;
+                    this.showPhoneSuggest = false;
+                },
+                hidePhoneSuggest() {
+                    setTimeout(() => { this.showPhoneSuggest = false; }, 150);
+                },
+                onPhoneInput() {
+                    this.form.phone = (this.form.phone || '').replace(/[^0-9]/g, '').slice(0, 11);
+                },
+
+                // ========== AppID ==========
+                generateAppId() {
+                    const rnd = () => String(Math.floor(Math.random() * 10));
+                    return (
+                        rnd() + "f" + rnd() + "af" +
+                        rnd() + rnd() + "ad" +
+                        rnd() + "912d306b5053abf90c7ebbb695887bc" +
+                        "870ae0706d573c348539c26c5c0a878641fcc0d3e90acb9be1e6ef858a" +
+                        "59af546f3c826988332376b7d18c8ea2398ee3a9c3db947e2471d32a49612"
+                    );
+                },
+                onAppidModeChange() {
+                    if (this.form.appidMode === 'random') {
+                        this.form.appid = this.generateAppId();
+                    } else {
+                        this.form.appid = '';
+                    }
+                },
+                getAppId() {
+                    if (this.form.appidMode === 'random' && !this.form.appid) {
+                        this.form.appid = this.generateAppId();
+                    }
+                    return this.form.appid || '';
+                },
+
+                // ========== 认证相关 ==========
+                async checkLogin() {
+                    try {
+                        const res = await fetch(this.getApiBase() + '/check-login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        if (res.status === 200) {
+                            this.isLoggedIn = true;
+                            this.startCountdown();
+                        }
+                    } catch (e) { /* 未登录 */ }
+                },
+                startCountdown() {
+                    const timer = setInterval(() => {
+                        if (this.countdown <= 1) {
+                            clearInterval(timer);
+                            this.goToIndex();
+                        } else {
+                            this.countdown--;
+                        }
+                    }, 1000);
+                },
+                goToIndex() {
+                    window.location.href = window.location.pathname.replace(/\/[^/]*$/, '/');
+                },
+
+                // ========== 发送验证码 ==========
+                async sendCode() {
+                    if (!this.form.phone || this.form.phone.length !== 11) {
+                        this.showToast('请输入正确的11位手机号');
+                        return;
+                    }
+
+                    this.savePhoneHistory(this.form.phone);
+                    this.sendDisabled = true;
+                    this.sendBtnText = '发送中...';
+
+                    try {
+                        const res = await fetch(this.getApiBase() + '/sms/send-code', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                phone: this.form.phone,
+                                appid: this.getAppId(),
+                                resultToken: ''
+                            })
+                        });
+                        const data = await res.json();
+
+                        if (data.status === 'success') {
+                            this.showToast(data.msg || '验证码已发送');
+                            this.startSendCountdown();
+                        } else if (data.status === 'need_captcha') {
+                            this.showToast('需要安全验证');
+                            await this.startCaptcha(this.form.phone, this.getAppId(), data.mobile || '');
+                            this.sendDisabled = false;
+                            this.sendBtnText = '发送验证码';
+                        } else {
+                            this.showToast(data.msg || '发送失败');
+                            this.sendDisabled = false;
+                            this.sendBtnText = '发送验证码';
+                        }
+                    } catch (e) {
+                        this.showToast('网络请求失败');
+                        this.sendDisabled = false;
+                        this.sendBtnText = '发送验证码';
+                    }
+                },
+                startSendCountdown() {
+                    this.sendCountdown = 60;
+                    this.sendBtnText = `${this.sendCountdown}s`;
+                    const timer = setInterval(() => {
+                        this.sendCountdown--;
+                        if (this.sendCountdown <= 0) {
+                            clearInterval(timer);
+                            this.sendDisabled = false;
+                            this.sendBtnText = '发送验证码';
+                        } else {
+                            this.sendBtnText = `${this.sendCountdown}s`;
+                        }
+                    }, 1000);
+                },
+
+                // ========== 腾讯验证码 ==========
+                async startCaptcha(phone, appid, mobileHex) {
+                    if (typeof TencentCaptcha !== 'function') {
+                        this.showToast('验证码组件未加载');
+                        return;
+                    }
+
+                    return new Promise((resolve) => {
+                        const captcha = new TencentCaptcha(CAPTCHA_APPID, async (res) => {
+                            if (res.ret === 0) {
+                                try {
+                                    // 校验验证码
+                                    const vr = await fetch(this.getApiBase() + '/sms/validate-captcha', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            ticket: res.ticket,
+                                            randstr: res.randstr,
+                                            mobile: mobileHex,
+                                            phone: phone,
+                                            appid: appid
+                                        })
+                                    });
+                                    const vd = await vr.json();
+
+                                    if (vd.status === 'success' && vd.resultToken) {
+                                        // 重新发送验证码
+                                        const sr = await fetch(this.getApiBase() + '/sms/send-code', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                phone: phone,
+                                                appid: appid,
+                                                resultToken: vd.resultToken
+                                            })
+                                        });
+                                        const sd = await sr.json();
+                                        if (sd.status === 'success') {
+                                            this.showToast(sd.msg || '验证码已发送');
+                                            this.startSendCountdown();
+                                        } else {
+                                            this.showToast(sd.msg || '发送失败');
+                                        }
+                                    } else {
+                                        this.showToast(vd.msg || '安全验证失败');
+                                    }
+                                } catch (e) {
+                                    this.showToast('网络请求失败');
+                                }
+                            } else {
+                                this.showToast('已取消安全验证');
+                            }
+                            resolve();
+                        });
+                        captcha.show();
+                    });
+                },
+
+                // ========== 登录 ==========
+                async handleLogin() {
+                    if (!this.form.phone || this.form.phone.length !== 11) {
+                        this.showToast('请输入正确的11位手机号');
+                        return;
+                    }
+                    if (!this.form.code || this.form.code.length < 4) {
+                        this.showToast('请输入验证码');
+                        return;
+                    }
+
+                    this.savePhoneHistory(this.form.phone);
+                    this.loginLoading = true;
+
+                    try {
+                        const res = await fetch(this.getApiBase() + '/sms/login', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                phone: this.form.phone,
+                                code: this.form.code,
+                                appid: this.getAppId()
+                            })
+                        });
+                        const data = await res.json();
+
+                        if (data.status === 'success') {
+                            this.showToast('登录成功');
+                            setTimeout(() => {
+                                window.location.href = window.location.pathname.replace(/\/[^/]*$/, '/');
+                            }, 500);
+                        } else {
+                            this.showToast(data.msg || '登录失败');
+                        }
+                    } catch (e) {
+                        this.showToast('网络请求失败');
+                    } finally {
+                        this.loginLoading = false;
+                    }
+                }
+            },
+            mounted() {
+                this.loadPhoneHistory();
+                this.onAppidModeChange();
+                this.checkLogin();
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

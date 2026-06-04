@@ -102,6 +102,7 @@ class UserService:
                 "t3_token": result.get('t3_token', ''),
                 "private_token": result.get('private_token', ''),
                 "token_online": result.get('token_online', ''),
+                "app_id": result.get('appId', ''),
                 "cookies": self._cookies
             }
             return self._login_info
