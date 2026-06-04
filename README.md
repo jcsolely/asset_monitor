@@ -19,6 +19,7 @@ SM4 国密加密存储
 - 接口请求频率限制，防止恶意刷接口
 - 安全响应头（CSP、XSS Protection、HSTS 等）
 - 手机号脱敏展示
+
 ## 功能介绍
 
 | 功能 | 说明 |
@@ -40,7 +41,7 @@ SM4 国密加密存储
 
 # 安装依赖
 ```bash
-pip install flask requests
+pip install flask requests cryptography gunicorn
 ```
 
 # 设置密钥并启动（开发模式）
