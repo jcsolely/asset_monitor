@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 联通短信验证码登录模块
-将 login.php 的后端逻辑移植为 Python 实现
 """
 import os
 import time
