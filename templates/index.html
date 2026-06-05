@@ -846,10 +846,10 @@
                             <div class="flex items-center justify-between mb-3">
                                 <span class="text-sm opacity-80">下行峰值速率</span>
                                 <div class="flex items-center gap-2">
-                                     <span v-if="data.speed.corner" class="text-xs bg-white/20 px-2 py-0.5 rounded-full">{{ data.speed.corner }}</span>
-                                     <div v-if="data.speed.network_state" class="flex gap-0.5">
-                                         <span v-for="i in 5" :key="i" class="text-xs" :class="i <= (parseInt(data.speed.network_state) || 0) ? 'text-yellow-300' : 'text-white/30'">★</span>
-                                     </div>
+                                     <span v-if="data.speed.corner" class="text-xs bg-white/15 text-white/90 px-2 py-0.5 rounded-full backdrop-blur-sm">{{ data.speed.corner }}</span>
+                                     <span v-if="data.speed.network_state" class="text-xs px-2 py-0.5 rounded-full backdrop-blur-sm" :class="parseInt(data.speed.network_state) === 1 ? 'bg-white/20 text-white/90' : 'bg-white/20 text-white/70'">
+                                        {{ parseInt(data.speed.network_state) === 1 ? '已开启' : '已关闭' }}
+                                     </span>
                                  </div>
                             </div>
                             <div class="text-4xl font-bold mb-2">{{ data.speed.rate || '--' }}</div>

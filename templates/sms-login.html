@@ -154,35 +154,7 @@
             border-radius: 16px;
             padding: 20px;
         }
-        .phone-suggest {
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 100%;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            z-index: 50;
-            max-height: 200px;
-            overflow-y: auto;
-            margin-top: 4px;
-        }
-        .phone-item {
-            padding: 12px 16px;
-            cursor: pointer;
-            font-size: 14px;
-            color: #374151;
-            transition: background 0.15s;
-        }
-        .phone-item:hover {
-            background: #f3f4f6;
-        }
-        .phone-empty {
-            padding: 12px 16px;
-            color: #9ca3af;
-            font-size: 13px;
-        }
+
     </style>
 </head>
 <body>
@@ -218,7 +190,7 @@
             <div v-else class="glass-card p-6">
                 <form @submit.prevent="handleLogin" class="space-y-5">
                     <!-- 手机号 -->
-                    <div class="relative">
+                    <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-2">手机号</label>
                         <input
                             v-model="form.phone"
@@ -227,21 +199,8 @@
                             maxlength="11"
                             autocomplete="off"
                             class="input-field"
-                            @focus="showPhoneSuggest = phoneHistory.length > 0"
-                            @blur="hidePhoneSuggest"
                             @input="onPhoneInput"
                         >
-                        <!-- 手机号历史记录 -->
-                        <div v-if="showPhoneSuggest && phoneHistory.length > 0" class="phone-suggest">
-                            <div
-                                v-for="ph in phoneHistory"
-                                :key="ph"
-                                class="phone-item"
-                                @mousedown.prevent="selectPhone(ph)"
-                            >
-                                {{ ph }}
-                            </div>
-                        </div>
                     </div>
 
                     <!-- AppID 模式 -->
@@ -314,8 +273,6 @@
 
     <script>
         const CAPTCHA_APPID = "195809716";
-        const PHONE_HISTORY_KEY = "phone_history";
-
         const { createApp } = Vue;
 
         createApp({
@@ -335,9 +292,7 @@
                     toastTimer: null,
                     sendBtnText: '发送验证码',
                     sendDisabled: false,
-                    sendCountdown: 0,
-                    showPhoneSuggest: false,
-                    phoneHistory: []
+                    sendCountdown: 0
                 };
             },
             methods: {
@@ -362,34 +317,6 @@
                     return base.replace(/\/$/, '') + '/login';
                 },
 
-                // ========== 手机号历史 ==========
-                loadPhoneHistory() {
-                    try {
-                        const raw = localStorage.getItem(PHONE_HISTORY_KEY);
-                        const list = raw ? JSON.parse(raw) : [];
-                        this.phoneHistory = Array.isArray(list) ? list.filter(v => typeof v === 'string' && v.length > 0) : [];
-                    } catch (e) {
-                        this.phoneHistory = [];
-                    }
-                },
-                savePhoneHistory(phone) {
-                    try {
-                        const p = (phone || '').replace(/[^0-9]/g, '').slice(0, 11);
-                        if (p.length !== 11) return;
-                        let list = this.phoneHistory.filter(v => v !== p);
-                        list.unshift(p);
-                        if (list.length > 20) list = list.slice(0, 20);
-                        this.phoneHistory = list;
-                        localStorage.setItem(PHONE_HISTORY_KEY, JSON.stringify(list));
-                    } catch (e) {}
-                },
-                selectPhone(phone) {
-                    this.form.phone = phone;
-                    this.showPhoneSuggest = false;
-                },
-                hidePhoneSuggest() {
-                    setTimeout(() => { this.showPhoneSuggest = false; }, 150);
-                },
                 onPhoneInput() {
                     this.form.phone = (this.form.phone || '').replace(/[^0-9]/g, '').slice(0, 11);
                 },
@@ -453,7 +380,6 @@
                         return;
                     }
 
-                    this.savePhoneHistory(this.form.phone);
                     this.sendDisabled = true;
                     this.sendBtnText = '发送中...';
 
@@ -572,7 +498,6 @@
                         return;
                     }
 
-                    this.savePhoneHistory(this.form.phone);
                     this.loginLoading = true;
 
                     try {
@@ -603,7 +528,6 @@
                 }
             },
             mounted() {
-                this.loadPhoneHistory();
                 this.onAppidModeChange();
                 this.checkLogin();
             }
