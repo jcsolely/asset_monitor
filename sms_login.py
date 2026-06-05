@@ -16,7 +16,7 @@ urllib3.disable_warnings()
 # ==========================================
 # 常量
 # ==========================================
-DEFAULT_APPID = "2f8af12ad9912d306b5053abf90c7ebbb695887bc870ae0706d573c348539c26c5c0a878641fcc0d3e90acb9be1e6ef858a59af546f3c826988332376b7d18c8ea2398ee3a9c3db947e2471d32a49612"
+DEFAULT_APPID = "8f0af12ad9912d306b5053abf90c7ebbb695887bc870ae0706d573c348539c26c5c0a878641fcc0d3e90acb9be1e6ef858a59af546f3c826988332376b7d18c8ea2398ee3a9c3db947e2471d32a49612"
 
 RSA_PUBLIC_KEY = """-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDc+CZK9bBA9IU+gZUOc6FUGu7y
@@ -37,7 +37,7 @@ UA_TEMPLATE = (
 # RSA 加密
 # ==========================================
 def rsa_encrypt(data):
-    """RSA 加密，与 PHP 版逻辑一致"""
+    """RSA 加密"""
     if not data:
         return ""
     try:
